@@ -2,11 +2,16 @@
 
 import numpy as np
 from skimage.transform import rescale
+from skimage.color import rgb2gray
+from skimage.io import imshow
+import skimage as im
+import random
+
 import robosims
 
 scaleFactor = 0.5
 imgSize = int(300 * scaleFactor)
-N_steps = 400
+N_steps = 10
 
 if __name__ == "__main__":
 
@@ -47,21 +52,32 @@ if __name__ == "__main__":
   vertical_vel = 0.0
   angle_data = np.empty((N_steps, 2))
   
-  image_data = np.empty((N_steps, imgSize, imgSize, 3))
+  image_data = np.empty((N_steps, imgSize, imgSize))
 
   for step in range(N_steps):
-    if step % 2 == 0:
-      ang_vel = np.random.uniform(low=-20, high=20)
-      vertical_vel = np.random.uniform(low=-20, high=20)
+    #if step % 2 == 0:
+    #ang_vel = np.random.uniform(low=-20, high=20)
+    
+    velList = [-20, 20]
+    ang_vel = random.choice(velList)
+    vertical_vel = np.random.uniform(low=-5, high=5)
 
     # Possible actions are: MoveLeft, MoveRight, MoveAhead, MoveBack, LookUp, LookDown, RotateRight, RotateLeft
     event = env.step(action=dict(action='Rotate', rotation=angle))
     event = env.step(action=dict(action='Look', horizon=vertical))
+    event = env.step(action=dict(action='MoveAhead', moveMagnitude=1.0))
     angle_data[step] = (angle, vertical)
-    image_data[step] = rescale(event.frame, scaleFactor)
+
+    image = rescale(event.frame, scaleFactor)
+    image2 = rgb2gray(image)
+
+    image_data[step] = np.fft.fftshift(image2)
+    imshow(image)
 
     angle += ang_vel
-    vertical += vertical_vel
+    x = vertical + vertical_vel
+    if (abs(x) < 10.0):
+      vertical += vertical_vel
 
     if (step + 1) % 100 == 0:
       print("Stored %d/%d frames." % (step + 1, N_steps))
